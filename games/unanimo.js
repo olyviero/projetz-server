@@ -86,7 +86,7 @@ const calculatePointsForAll = (users, updateUserPoints, broadcastResults) => {
     Object.values(aggregatedResponses).forEach((uidsSet) => {
         const uids = Array.from(uidsSet) // Convertir le Set en Array pour itérer
         uids.forEach((uid) => {
-            const pointsToAdd = uids.length - 1
+            const pointsToAdd = uids.length < 2 ? 0 : uids.length
             updateUserPoints(uid, pointsToAdd, users)
         })
     })
