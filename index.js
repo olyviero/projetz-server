@@ -21,6 +21,10 @@ app.use(cors())
 const connections = {}
 const players = {}
 
+// Settings
+let countdownMax = 1
+let gameDurationMax = 5
+
 // ---------------------------------------------------------------------------------------
 // Game State
 // ---------------------------------------------------------------------------------------
@@ -53,10 +57,8 @@ const initializeGame = () => {
 // ---------------------------------------------------------------------------------------
 // Timers
 // ---------------------------------------------------------------------------------------
-const countdownMax = 1
-const gameDurationMax = 5
-
 let countdownTimer
+let gameTimer
 
 const startGameCountdown = () => {
     let countdown = countdownMax
@@ -75,11 +77,14 @@ const startGameCountdown = () => {
 }
 
 const startGameTimer = () => {
+    clearInterval(gameTimer)
+
     changeGameState(GameState.GamePlaying)
     let gameDuration = gameDurationMax
 
-    const gameTimer = setInterval(() => {
+    gameTimer = setInterval(() => {
         if (gameDuration > 0) {
+            console.log(gameDuration)
             broadcast({ type: 'countdown', countdown: gameDuration })
             gameDuration -= 1
         } else {
@@ -129,6 +134,18 @@ function handleMessage(message) {
             }
             break
 
+        case 'saveSettings':
+            const { unanimo } = content.settings
+
+            // Unanimo
+            gameDurationMax = parseInt(unanimo.gameDurationMax, 10) || gameDurationMax
+
+            broadcast({
+                type: 'updateTimersMax',
+                timersMax: { countdownMax: countdownMax, gameDurationMax: gameDurationMax },
+            })
+            break
+
         default:
             console.log(`Unhandled message type: ${type}`)
     }
@@ -176,6 +193,7 @@ wsServer.on('connection', (ws, request) => {
 
     ws.on('message', (message) => {
         const data = JSON.parse(message)
+        console.dir(data, { depth: null })
 
         // New Player (special case since we create a new player[uid] in players{})
         if (data.type === 'newPlayer') {
@@ -191,11 +209,12 @@ wsServer.on('connection', (ws, request) => {
                 }
                 broadcast({ type: 'updatePlayers', players: players })
                 broadcast({
-                    type: 'gameTimersMax',
+                    type: 'updateTimersMax',
                     timersMax: { countdownMax: countdownMax, gameDurationMax: gameDurationMax },
                 })
             }
         }
+
         // Any other message
         else {
             handleMessage(data)
