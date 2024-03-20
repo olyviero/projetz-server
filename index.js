@@ -1,6 +1,6 @@
 const express = require('express')
 const cors = require('cors')
-const middleware = require('./middleware')
+// const middleware = require('./middleware')
 
 const app = express()
 const port = 8000
@@ -10,7 +10,7 @@ const { WebSocketServer } = require('ws')
 const url = require('url')
 
 const server = http.createServer(app)
-const wsServer = new WebSocketServer({ server })
+const wsServer = new WebSocketServer({ server, host: '0.0.0.0' })
 
 const unanimoGame = require('./games/unanimo')
 
