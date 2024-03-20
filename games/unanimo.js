@@ -147,6 +147,9 @@ const calculatePointsForAll = (players, updatePlayerPoints, broadcastResults) =>
 }
 
 const handleGameEnd = (players, updatePlayerPoints, broadcastResults) => {
+    console.log('-----')
+    console.log(Object.keys(playerResponses).length)
+    console.log(Object.keys(players).length)
     if (Object.keys(playerResponses).length === Object.keys(players).length) {
         calculatePointsForAll(players, updatePlayerPoints, broadcastResults)
     }

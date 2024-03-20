@@ -21,9 +21,16 @@ app.use(cors())
 const connections = {}
 const players = {}
 
-// Settings
-let countdownMax = 1
-let gameDurationMax = 5
+// ---------------------------------------------------------------------------------------
+// Game Settings
+// ---------------------------------------------------------------------------------------
+let gamesSettings = {
+    unanimo: {
+        gameDurationMax: 3,
+        nbInputFields: 5,
+        theme: '',
+    },
+}
 
 // ---------------------------------------------------------------------------------------
 // Game State
@@ -48,9 +55,9 @@ const changeGameState = (newState) => {
 // ---------------------------------------------------------------------------------------
 // Initialize Game
 // ---------------------------------------------------------------------------------------
-const initializeGame = () => {
-    const theme = unanimoGame.pickRandomTheme()
-    broadcast({ type: 'gameSettings', gameSettings: { theme: theme } })
+const initializeGame = async () => {
+    gamesSettings.unanimo.theme = await unanimoGame.pickRandomTheme()
+    broadcastSettings()
     startGameCountdown()
 }
 
@@ -61,7 +68,7 @@ let countdownTimer
 let gameTimer
 
 const startGameCountdown = () => {
-    let countdown = countdownMax
+    let countdown = 1
     changeGameState(GameState.CountdownToStart)
     broadcast({ type: 'countdown', countdown: countdown })
 
@@ -80,11 +87,10 @@ const startGameTimer = () => {
     clearInterval(gameTimer)
 
     changeGameState(GameState.GamePlaying)
-    let gameDuration = gameDurationMax
+    let gameDuration = gamesSettings.unanimo.gameDurationMax
 
     gameTimer = setInterval(() => {
         if (gameDuration > 0) {
-            console.log(gameDuration)
             broadcast({ type: 'countdown', countdown: gameDuration })
             gameDuration -= 1
         } else {
@@ -129,6 +135,7 @@ function handleMessage(message) {
 
         case 'submitAnswers':
             if (content.game === 'unanimo') {
+                console.log(content.answers)
                 unanimoGame.addResponse(uid, content.answers)
                 unanimoGame.handleGameEnd(players, updatePlayerPoints, broadcastResults)
             }
@@ -138,12 +145,9 @@ function handleMessage(message) {
             const { unanimo } = content.settings
 
             // Unanimo
-            gameDurationMax = parseInt(unanimo.gameDurationMax, 10) || gameDurationMax
+            gamesSettings.unanimo.gameDurationMax = parseInt(unanimo.gameDurationMax, 10) || gameDurationMax
 
-            broadcast({
-                type: 'updateTimersMax',
-                timersMax: { countdownMax: countdownMax, gameDurationMax: gameDurationMax },
-            })
+            broadcastSettings()
             break
 
         default:
@@ -176,7 +180,15 @@ const broadcastToOne = (uid, data) => {
         console.log(`Connection for UID ${uid} not found or not open.`)
     }
 }
-// Fonction pour diffuser les résultats à tous les utilisateurs
+// Broadcast Settings
+const broadcastSettings = () => {
+    console.log(gamesSettings.unanimo.theme)
+    broadcast({
+        type: 'updateGamesSettings',
+        gamesSettings: gamesSettings,
+    })
+}
+// Broadcast Results
 const broadcastResults = (players, pointsPerAnswer) => {
     console.log({ pointsPerAnswer })
     broadcast({ type: 'updatePlayers', players: players })
@@ -208,10 +220,7 @@ wsServer.on('connection', (ws, request) => {
                     role: data.content.role,
                 }
                 broadcast({ type: 'updatePlayers', players: players })
-                broadcast({
-                    type: 'updateTimersMax',
-                    timersMax: { countdownMax: countdownMax, gameDurationMax: gameDurationMax },
-                })
+                broadcastSettings()
             }
         }
 
