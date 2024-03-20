@@ -70,12 +70,11 @@ const addResponse = (uid, answers) => (playerResponses[uid] = { answers })
 
 const calculatePointsForAll = (users, updateUserPoints, broadcastResults) => {
     const aggregatedResponses = Object.entries(playerResponses).reduce((acc, [uid, { answers }]) => {
-        // Utilisation d'un Set pour filtrer les doublons dans les réponses de chaque utilisateur
         const uniqueAnswers = new Set(answers.filter((answer) => answer.trim() !== ''))
 
         uniqueAnswers.forEach((answer) => {
             if (!acc[answer]) {
-                acc[answer] = new Set() // Utilisez un Set pour éviter les doublons entre utilisateurs
+                acc[answer] = new Set()
             }
             acc[answer].add(uid)
         })
@@ -83,15 +82,19 @@ const calculatePointsForAll = (users, updateUserPoints, broadcastResults) => {
         return acc
     }, {})
 
+    let pointsPerAnswer = {}
+
     Object.values(aggregatedResponses).forEach((uidsSet) => {
-        const uids = Array.from(uidsSet) // Convertir le Set en Array pour itérer
+        const uids = Array.from(uidsSet)
+        const pointsToAdd = uids.length < 2 ? 0 : uids.length
+        pointsPerAnswer[answer] = pointsToAdd
+
         uids.forEach((uid) => {
-            const pointsToAdd = uids.length < 2 ? 0 : uids.length
             updateUserPoints(uid, pointsToAdd, users)
         })
     })
 
-    playerResponses = {} // Réinitialiser les réponses pour la prochaine partie
+    playerResponses = {}
     broadcastResults(users)
 }
 
