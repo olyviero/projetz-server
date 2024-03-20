@@ -146,6 +146,7 @@ function handleMessage(message) {
 
             // Unanimo
             gamesSettings.unanimo.gameDurationMax = parseInt(unanimo.gameDurationMax, 10) || gameDurationMax
+            gamesSettings.unanimo.nbInputFields = parseInt(unanimo.nbInputFields, 10) || nbInputFields
 
             broadcastSettings()
             break
