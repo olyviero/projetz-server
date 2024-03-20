@@ -103,11 +103,12 @@ const updateUserPoints = (uid, pointsToAdd, users) => {
 // WS Messages
 // ---------------------------------------------------------------------------------------
 function handleMessage(message) {
+    const type = message.type
     const uid = message.uid
     const user = users[message.uid]
     const content = message.content
 
-    switch (message.type) {
+    switch (type) {
         case 'updatePlayer':
             user.username = content.username
             user.photoURL = content.photoURL
@@ -131,7 +132,7 @@ function handleMessage(message) {
             break
 
         default:
-            console.log(`Unhandled message type: ${message.type}`)
+            console.log(`Unhandled message type: ${type}`)
     }
 }
 

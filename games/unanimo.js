@@ -71,20 +71,18 @@ const addResponse = (uid, answers) => (playerResponses[uid] = { answers })
 const calculatePointsForAll = (users, updateUserPoints, broadcastResults) => {
     const aggregatedResponses = Object.entries(playerResponses).reduce((acc, [uid, { answers }]) => {
         const uniqueAnswers = new Set(answers.filter((answer) => answer.trim() !== ''))
-
         uniqueAnswers.forEach((answer) => {
             if (!acc[answer]) {
                 acc[answer] = new Set()
             }
             acc[answer].add(uid)
         })
-
         return acc
     }, {})
 
     let pointsPerAnswer = {}
 
-    Object.values(aggregatedResponses).forEach((uidsSet) => {
+    Object.entries(aggregatedResponses).forEach(([answer, uidsSet]) => {
         const uids = Array.from(uidsSet)
         const pointsToAdd = uids.length < 2 ? 0 : uids.length
         pointsPerAnswer[answer] = pointsToAdd
