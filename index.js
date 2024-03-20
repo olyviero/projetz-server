@@ -103,21 +103,19 @@ const updateUserPoints = (uid, pointsToAdd, users) => {
 // WS Messages
 // ---------------------------------------------------------------------------------------
 function handleMessage(message) {
-    const type = message.type
-    const uid = message.uid
+    const { type, uid, content } = message
     const user = users[message.uid]
-    const content = message.content
 
     switch (type) {
         case 'updatePlayer':
             user.username = content.username
             user.photoURL = content.photoURL
-            broadcast({ type: 'users', users: users })
+            broadcast({ type: 'updateUsers', users: users })
             break
 
         case 'togglePlayerReady':
             user.ready = !user.ready
-            broadcast({ type: 'users', users: users })
+            broadcast({ type: 'updateUsers', users: users })
             break
 
         case 'startGame':
@@ -140,7 +138,7 @@ function handleClose(uid) {
     console.log(`Connection closed for UID: ${uid}`)
     delete users[uid]
     delete connections[uid]
-    broadcast({ type: 'users', users: users })
+    broadcast({ type: 'updateUsers', users: users })
 }
 
 // ---------------------------------------------------------------------------------------
@@ -163,9 +161,9 @@ const broadcastToOne = (uid, data) => {
 }
 // Fonction pour diffuser les résultats à tous les utilisateurs
 const broadcastResults = (users) => {
-    broadcast({ type: 'users', users: users })
+    broadcast({ type: 'updateUsers', users: users })
     Object.entries(users).forEach(([uid, user]) => {
-        broadcastToOne(uid, { type: 'pointsUpdate', points: user.points })
+        broadcastToOne(uid, { type: 'updateUserPoints', points: user.points })
     })
 }
 // ---------------------------------------------------------------------------------------
@@ -189,7 +187,7 @@ wsServer.on('connection', (ws, request) => {
                     photoURL: data.content.photoURL,
                     role: data.content.role,
                 }
-                broadcast({ type: 'users', users: users })
+                broadcast({ type: 'updateUsers', users: users })
                 broadcast({
                     type: 'gameTimersMax',
                     timersMax: { countdownMax: countdownMax, gameDurationMax: gameDurationMax },
