@@ -19,7 +19,7 @@ app.use(cors())
 // app.use(middleware.decodeToken)
 
 const connections = {}
-const users = {}
+const players = {}
 
 // ---------------------------------------------------------------------------------------
 // Game State
@@ -54,7 +54,7 @@ const initializeGame = () => {
 // Timers
 // ---------------------------------------------------------------------------------------
 const countdownMax = 1
-const gameDurationMax = 10
+const gameDurationMax = 5
 
 let countdownTimer
 
@@ -84,8 +84,8 @@ const startGameTimer = () => {
             gameDuration -= 1
         } else {
             clearInterval(gameTimer)
-            broadcast({ type: 'gameEnded' })
-            changeGameState(GameState.GameOver)
+            broadcast({ type: 'endRound' })
+            changeGameState(GameState.RoundOver)
         }
     }, 1000)
 }
@@ -93,9 +93,9 @@ const startGameTimer = () => {
 // ---------------------------------------------------------------------------------------
 // Update Player Points
 // ---------------------------------------------------------------------------------------
-const updateUserPoints = (uid, pointsToAdd, users) => {
-    if (users[uid]) {
-        users[uid].points += pointsToAdd
+const updatePlayerPoints = (uid, pointsToAdd, players) => {
+    if (players[uid]) {
+        players[uid].points += pointsToAdd
     }
 }
 
@@ -104,18 +104,18 @@ const updateUserPoints = (uid, pointsToAdd, users) => {
 // ---------------------------------------------------------------------------------------
 function handleMessage(message) {
     const { type, uid, content } = message
-    const user = users[message.uid]
+    const player = players[message.uid]
 
     switch (type) {
         case 'updatePlayer':
-            user.username = content.username
-            user.photoURL = content.photoURL
-            broadcast({ type: 'updateUsers', users: users })
+            player.username = content.username
+            player.photoURL = content.photoURL
+            broadcast({ type: 'updatePlayers', players: players })
             break
 
         case 'togglePlayerReady':
-            user.ready = !user.ready
-            broadcast({ type: 'updateUsers', users: users })
+            player.ready = !player.ready
+            broadcast({ type: 'updatePlayers', players: players })
             break
 
         case 'startGame':
@@ -125,7 +125,7 @@ function handleMessage(message) {
         case 'submitAnswers':
             if (content.game === 'unanimo') {
                 unanimoGame.addResponse(uid, content.answers)
-                unanimoGame.handleGameEnd(users, updateUserPoints, broadcastResults)
+                unanimoGame.handleGameEnd(players, updatePlayerPoints, broadcastResults)
             }
             break
 
@@ -136,9 +136,9 @@ function handleMessage(message) {
 
 function handleClose(uid) {
     console.log(`Connection closed for UID: ${uid}`)
-    delete users[uid]
+    delete players[uid]
     delete connections[uid]
-    broadcast({ type: 'updateUsers', users: users })
+    broadcast({ type: 'updatePlayers', players: players })
 }
 
 // ---------------------------------------------------------------------------------------
@@ -152,42 +152,44 @@ const broadcast = (data) => {
 }
 const broadcastToOne = (uid, data) => {
     const message = JSON.stringify(data)
-    const userConnection = connections[uid]
-    if (userConnection) {
-        userConnection.send(message)
+    const playerConnection = connections[uid]
+    if (playerConnection) {
+        playerConnection.send(message)
     } else {
         console.log(`Connection for UID ${uid} not found or not open.`)
     }
 }
 // Fonction pour diffuser les résultats à tous les utilisateurs
-const broadcastResults = (users) => {
-    broadcast({ type: 'updateUsers', users: users })
-    Object.entries(users).forEach(([uid, user]) => {
-        broadcastToOne(uid, { type: 'updateUserPoints', points: user.points })
+const broadcastResults = (players, pointsPerAnswer) => {
+    console.log({ pointsPerAnswer })
+    broadcast({ type: 'updatePlayers', players: players })
+    broadcast({ type: 'unanimoPointsPerAnswers', pointsPerAnswer: pointsPerAnswer })
+    Object.entries(players).forEach(([uid, player]) => {
+        broadcastToOne(uid, { type: 'updatePlayerPoints', points: player.points })
     })
 }
 // ---------------------------------------------------------------------------------------
 // WS on connection
 // ---------------------------------------------------------------------------------------
 wsServer.on('connection', (ws, request) => {
-    console.log('server: user connected')
+    console.log('server: player connected')
 
     ws.on('message', (message) => {
         const data = JSON.parse(message)
 
-        // New Player (special case since we create a new user[uid] in users{})
+        // New Player (special case since we create a new player[uid] in players{})
         if (data.type === 'newPlayer') {
             const uid = data.uid
             if (!connections[uid]) {
                 connections[uid] = ws
-                users[uid] = {
+                players[uid] = {
                     username: data.content.username,
                     ready: false,
                     points: 0,
                     photoURL: data.content.photoURL,
                     role: data.content.role,
                 }
-                broadcast({ type: 'updateUsers', users: users })
+                broadcast({ type: 'updatePlayers', players: players })
                 broadcast({
                     type: 'gameTimersMax',
                     timersMax: { countdownMax: countdownMax, gameDurationMax: gameDurationMax },
