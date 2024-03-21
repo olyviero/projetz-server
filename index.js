@@ -30,6 +30,10 @@ let gamesSettings = {
         nbInputFields: 5,
         theme: '',
     },
+    enigma: {
+        title: '',
+        nbAttemps: 2,
+    },
 }
 
 // ---------------------------------------------------------------------------------------
@@ -152,12 +156,7 @@ function handleMessage(message) {
             break
 
         case 'saveSettings':
-            const { unanimo } = content.settings
-
-            // Unanimo
-            gamesSettings.unanimo.gameDurationMax = parseInt(unanimo.gameDurationMax, 10) || gameDurationMax
-            gamesSettings.unanimo.nbInputFields = parseInt(unanimo.nbInputFields, 10) || nbInputFields
-
+            gamesSettings = content.settings
             broadcastSettings()
             break
 
@@ -230,8 +229,8 @@ wsServer.on('connection', (ws, request) => {
                     photoURL: data.content.photoURL,
                     role: data.content.role,
                 }
-                broadcast({ type: 'updatePlayers', players: players })
                 broadcastSettings()
+                broadcast({ type: 'updatePlayers', players: players })
             }
         }
 
