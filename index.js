@@ -124,6 +124,17 @@ function handleMessage(message) {
             broadcast({ type: 'updatePlayers', players: players })
             break
 
+        case 'restorePlayerPoints':
+            players[uid].points = content.points
+            broadcast({ type: 'updatePlayers', players: players })
+            break
+
+        case 'resetScores':
+            Object.keys(players).forEach((uid) => (players[uid].points = 0))
+            broadcast({ type: 'updatePlayers', players: players })
+            broadcast({ type: 'resetScores' })
+            break
+
         case 'togglePlayerReady':
             player.ready = !player.ready
             broadcast({ type: 'updatePlayers', players: players })
@@ -135,7 +146,6 @@ function handleMessage(message) {
 
         case 'submitAnswers':
             if (content.game === 'unanimo') {
-                console.log(content.answers)
                 unanimoGame.addResponse(uid, content.answers)
                 unanimoGame.handleGameEnd(players, updatePlayerPoints, broadcastResults)
             }
