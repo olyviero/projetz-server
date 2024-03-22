@@ -99,7 +99,7 @@ const startGameTimer = () => {
             gameDuration -= 1
         } else {
             clearInterval(gameTimer)
-            broadcast({ type: 'endRound' })
+            broadcast({ type: 'gameState', state: 'RoundOver' })
             changeGameState(GameState.RoundOver)
         }
     }, 1000)
