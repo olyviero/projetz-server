@@ -23,3 +23,7 @@ https://www.npmjs.com/package/react-use-websocket
 ## TODO
 
 Mission
+
+# in case in glitch:
+
+fuser -k 8000/tcp
