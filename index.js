@@ -26,15 +26,27 @@ const players = {}
 // ---------------------------------------------------------------------------------------
 let gamesSettings = {
     unanimo: {
+        isActive: false,
         gameDurationMax: 3,
         nbInputFields: 5,
         theme: '',
     },
     enigma: {
+        isActive: false,
         title: '',
         nbAttemps: 2,
     },
 }
+
+// ---------------------------------------------------------------------------------------
+// Active Games
+// ---------------------------------------------------------------------------------------
+let activeGames = {
+    unanimo: false,
+    enigma: false,
+}
+
+let enigmaAnswers = {}
 
 // ---------------------------------------------------------------------------------------
 // Game State
@@ -125,23 +137,23 @@ function handleMessage(message) {
         case 'updatePlayer':
             player.username = content.username
             player.photoURL = content.photoURL
-            broadcast({ type: 'updatePlayers', players: players })
+            broadcastUsers()
             break
 
         case 'restorePlayerPoints':
             players[uid].points = content.points
-            broadcast({ type: 'updatePlayers', players: players })
+            broadcastUsers()
             break
 
         case 'resetScores':
             Object.keys(players).forEach((uid) => (players[uid].points = 0))
-            broadcast({ type: 'updatePlayers', players: players })
+            broadcastUsers()
             broadcast({ type: 'resetScores' })
             break
 
         case 'togglePlayerReady':
             player.ready = !player.ready
-            broadcast({ type: 'updatePlayers', players: players })
+            broadcastUsers()
             break
 
         case 'startGame':
@@ -155,9 +167,33 @@ function handleMessage(message) {
             }
             break
 
-        case 'saveSettings':
+        case 'updateSettings':
             gamesSettings = content.settings
             broadcastSettings()
+            break
+
+        case 'updateActiveGames':
+            activeGames = content.activeGames
+            broadcastActiveGames()
+            break
+
+        case 'newEnigmaAnswer':
+            enigmaAnswers[uid] = content.answer
+            broadcastToAdmin({ type: 'updateEnigmaAnswers', answers: enigmaAnswers })
+            break
+
+        case 'endEnigma':
+            console.log('endEnigma')
+            scoreUpdates = content.enigmaScores
+            console.log(content.enigmaScores)
+            Object.keys(scoreUpdates).forEach((uid) => {
+                if (players[uid]) {
+                    players[uid].points += scoreUpdates[uid]
+                }
+            })
+            console.log({ players })
+            broadcastUsers()
+            broadcast({ type: 'endEnigma' })
             break
 
         default:
@@ -169,7 +205,7 @@ function handleClose(uid) {
     console.log(`Connection closed for UID: ${uid}`)
     delete players[uid]
     delete connections[uid]
-    broadcast({ type: 'updatePlayers', players: players })
+    broadcastUsers()
 }
 
 // ---------------------------------------------------------------------------------------
@@ -190,18 +226,37 @@ const broadcastToOne = (uid, data) => {
         console.log(`Connection for UID ${uid} not found or not open.`)
     }
 }
-// Broadcast Settings
+const broadcastToAdmin = (data) => {
+    const message = JSON.stringify(data)
+    Object.entries(players).forEach(([uid, player]) => {
+        if (player.role === 'gameMaster') {
+            const admin = connections[uid]
+            admin.send(message)
+        }
+    })
+}
+
+const broadcastUsers = () => {
+    broadcast({
+        type: 'updatePlayers',
+        players: players,
+    })
+}
 const broadcastSettings = () => {
-    console.log(gamesSettings.unanimo.theme)
     broadcast({
         type: 'updateGamesSettings',
         gamesSettings: gamesSettings,
     })
 }
+const broadcastActiveGames = () => {
+    broadcast({
+        type: 'updateActiveGames',
+        activeGames: activeGames,
+    })
+}
 // Broadcast Results
 const broadcastResults = (players, pointsPerAnswer) => {
-    console.log({ pointsPerAnswer })
-    broadcast({ type: 'updatePlayers', players: players })
+    broadcastUsers()
     broadcast({ type: 'unanimoPointsPerAnswers', pointsPerAnswer: pointsPerAnswer })
     Object.entries(players).forEach(([uid, player]) => {
         broadcastToOne(uid, { type: 'updatePlayerPoints', points: player.points })
@@ -229,8 +284,14 @@ wsServer.on('connection', (ws, request) => {
                     photoURL: data.content.photoURL,
                     role: data.content.role,
                 }
-                broadcastSettings()
-                broadcast({ type: 'updatePlayers', players: players })
+                broadcastUsers()
+
+                broadcastToOne(uid, { type: 'updateActiveGames', activeGames: activeGames })
+                broadcastToOne(uid, { type: 'updateGamesSettings', gamesSettings: gamesSettings })
+
+                if (players[uid].role === 'gameMaster') {
+                    broadcastToOne(uid, { type: 'updateEnigmaAnswers', answers: enigmaAnswers })
+                }
             }
         }
 
