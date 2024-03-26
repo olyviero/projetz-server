@@ -2,19 +2,20 @@ const express = require('express')
 const cors = require('cors')
 // const middleware = require('./middleware')
 
-const app = express()
+// const app = express()
 const port = 8000
 
 const http = require('http')
 const { WebSocketServer } = require('ws')
 const url = require('url')
 
-const server = http.createServer(app)
+// const server = http.createServer(app)
+const server = http.createServer()
 const wsServer = new WebSocketServer({ server, host: '0.0.0.0' })
 
 const unanimoGame = require('./games/unanimo')
 
-app.use(cors())
+// app.use(cors())
 // app.use(express.json())
 // app.use(middleware.decodeToken)
 
@@ -230,8 +231,8 @@ const broadcastToAdmin = (data) => {
     const message = JSON.stringify(data)
     Object.entries(players).forEach(([uid, player]) => {
         if (player.role === 'gameMaster') {
-            const admin = connections[uid]
-            admin.send(message)
+            const playerAdmin = connections[uid]
+            playerAdmin.send(message)
         }
     })
 }
